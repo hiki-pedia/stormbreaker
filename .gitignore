@@ -1,0 +1,21 @@
+.DS_Store
+
+# competition data
+train/
+test/
+info.xlsx
+sample_submission.csv
+*.csv
+*.xlsx
+
+# generated artifacts
+outputs/
+submissions/
+*.parquet
+*.joblib
+*.pkl
+*.pickle
+
+# python cache
+__pycache__/
+*.py[cod]
