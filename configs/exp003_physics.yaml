@@ -1,0 +1,46 @@
+experiment_id: exp003
+name: physics_weather_features
+
+data:
+  train_labels: train/train_labels.csv
+  train_ldaps: train/ldaps_train.csv
+  train_gfs: train/gfs_train.csv
+  test_ldaps: test/ldaps_test.csv
+  test_gfs: test/gfs_test.csv
+  sample_submission: sample_submission.csv
+  info: info.xlsx
+
+validation:
+  type: time_split
+  train_start: "2022-01-01 01:00:00"
+  train_end: "2023-12-31 23:00:00"
+  valid_start: "2024-01-01 00:00:00"
+  valid_end: "2025-01-01 00:00:00"
+  group_3_train_start: "2023-01-01 01:00:00"
+
+features:
+  use_ldaps: true
+  use_gfs: true
+  use_scada_directly_for_inference: false
+  calendar_features: true
+  wind_speed_features: true
+  use_spatial_features: false
+  use_physics_features: true
+  use_cross_source_physics: true
+  grid_aggregations:
+    - mean
+    - min
+    - max
+    - std
+
+model:
+  type: lightgbm
+  train_separate_group_models: true
+
+postprocess:
+  clip_to_capacity: true
+
+outputs:
+  dir: outputs/exp003
+  submission: submissions/exp003_submission.csv
+

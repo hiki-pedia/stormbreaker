@@ -1,0 +1,350 @@
+# 실험 로그
+
+## exp001
+
+- 날짜: 2026-07-14
+- 목적: 제공 LDAPS/GFS만 사용한 첫 LightGBM 기준 모델 생성
+- 학습 기간:
+  - `kpx_group_1`, `kpx_group_2`: 2022-2023년
+  - `kpx_group_3`: 2023년
+- 검증 기간: 2024년
+- 타깃 그룹: `kpx_group_1`, `kpx_group_2`, `kpx_group_3`
+- 입력 데이터: `train/ldaps_train.csv`, `train/gfs_train.csv`, `train/train_labels.csv`
+- 평가 입력 데이터: `test/ldaps_test.csv`, `test/gfs_test.csv`
+- SCADA 사용 여부: 사용하지 않음
+- 외부 데이터 사용 여부: 사용하지 않음
+- 피처:
+  - LDAPS/GFS 전체 격자별 수치 변수의 평균, 최솟값, 최댓값, 표준편차
+  - U/V 성분 기반 풍속
+  - 풍향 성분 `sin`, `cos`
+  - 풍속 제곱, 풍속 세제곱
+  - 예보 선행시간
+  - 시간 피처: 시간, 월, 연중 일자, 요일, 주기형 sin/cos
+- 모델: 그룹별 LightGBM `regression_l1`
+- 입력 피처 수: 494
+- 결측 처리:
+  - 타깃 결측은 해당 그룹 학습에서 제외
+  - LDAPS/GFS 파생 피처 결측은 `NaN` 유지
+  - 제출 예측값 결측 대체 처리 후 설비용량 기준 범위 제한
+- 검증 NMAE:
+  - 전체 구간 평균 NMAE: `0.094506`
+  - 실제 발전량 10% 이상 구간 평균 NMAE: `0.131713`
+- 검증 1-NMAE:
+  - 전체 구간: `0.905494`
+  - 실제 발전량 10% 이상 구간: `0.868287`
+- 그룹별 검증 NMAE, 실제 발전량 10% 이상 구간:
+  - `kpx_group_1`: `0.124560`
+  - `kpx_group_2`: `0.123037`
+  - `kpx_group_3`: `0.147543`
+- 최적 반복 횟수:
+  - `kpx_group_1`: `274`
+  - `kpx_group_2`: `289`
+  - `kpx_group_3`: `328`
+- 공개 리더보드:
+  - 순위: `380`
+  - 총점: `0.6198539548`
+  - 1-nMAE: `0.8710202747`
+  - FiCR: `0.3686876349`
+  - 제출수: `1`
+- 비공개 리더보드: 미제출
+- 제출 파일: `submissions/exp001_submission.csv`
+- 코드 스냅샷: `experiments/exp001/`
+- 주요 산출물:
+  - `experiments/exp001/README.md`
+  - `experiments/exp001/code/`
+  - `outputs/exp001/result.md`
+  - `outputs/exp001/train_features.parquet`
+  - `outputs/exp001/test_features.parquet`
+  - `outputs/exp001/metrics.json`
+  - `outputs/exp001/validation_predictions.csv`
+  - `outputs/exp001/feature_importance.csv`
+  - `outputs/exp001/models/`
+- 확인 사항:
+  - 제출 행 수: `8760`
+  - 제출 결측값: `0`
+  - 제출 양식과 `forecast_id` 순서 일치
+- 관찰:
+  - 세 그룹 모두 계절성 피처와 GFS 850hPa 계열 풍속/기온 피처 중요도가 높게 나타남.
+  - `kpx_group_3`의 검증 NMAE가 가장 높아 별도 개선이 필요함.
+  - 기준 모델에서 위치 기반 그룹별 격자 피처를 아직 쓰지 않았음.
+  - 내부 검증 1-NMAE와 공개 리더보드 1-nMAE는 비슷하게 나와 검증 설계는 첫 기준점으로 유효해 보임.
+  - FiCR이 낮아 정산금 획득 관점의 보정/후처리가 필요함.
+- 다음 작업:
+  - exp002에서 터빈 위치 기반 LDAPS/GFS 거리 가중 피처 추가
+  - 그룹별 가까운 LDAPS 격자 피처 비교
+  - 예측값이 0 또는 설비용량에 붙는 구간의 후처리 필요성 확인
+
+## exp002
+
+- 날짜: 2026-07-14
+- 목적: 터빈 위치 기반 기상 격자 피처 추가
+- 학습 기간:
+  - `kpx_group_1`, `kpx_group_2`: 2022-2023년
+  - `kpx_group_3`: 2023년
+- 검증 기간: 2024년
+- 타깃 그룹: `kpx_group_1`, `kpx_group_2`, `kpx_group_3`
+- 입력 데이터: `train/ldaps_train.csv`, `train/gfs_train.csv`, `train/train_labels.csv`, `info.xlsx`
+- 평가 입력 데이터: `test/ldaps_test.csv`, `test/gfs_test.csv`
+- SCADA 사용 여부: 사용하지 않음
+- 외부 데이터 사용 여부: 사용하지 않음
+- 피처:
+  - exp001 피처 전체
+  - 그룹별 터빈 중심 기준 거리 가중 평균 피처
+  - 그룹별 가장 가까운 기상 격자 피처
+- 모델: 그룹별 LightGBM `regression_l1`
+- 입력 피처 수: 1214
+- 검증 NMAE:
+  - 전체 구간 평균 NMAE: `0.093907`
+  - 실제 발전량 10% 이상 구간 평균 NMAE: `0.131004`
+- 검증 1-NMAE:
+  - 전체 구간: `0.906093`
+  - 실제 발전량 10% 이상 구간: `0.868996`
+- exp001 대비:
+  - 전체 구간 1-NMAE: `+0.000599`
+  - 실제 발전량 10% 이상 구간 1-NMAE: `+0.000709`
+- 그룹별 검증 NMAE, 실제 발전량 10% 이상 구간:
+  - `kpx_group_1`: `0.122706`
+  - `kpx_group_2`: `0.122869`
+  - `kpx_group_3`: `0.147438`
+- 최적 반복 횟수:
+  - `kpx_group_1`: `291`
+  - `kpx_group_2`: `529`
+  - `kpx_group_3`: `239`
+- 공개 리더보드:
+  - 총점: `0.6195372769`
+  - 1-nMAE: `0.8710915115`
+  - FiCR: `0.3679830423`
+- 비공개 리더보드: 미제출
+- 제출 파일: `submissions/exp002_submission.csv`
+- 코드 스냅샷: `experiments/exp002/`
+- 결과 요약 문서: `outputs/exp002/result.md`
+- 주요 산출물:
+  - `experiments/exp002/README.md`
+  - `experiments/exp002/code/`
+  - `outputs/exp002/metrics.json`
+  - `outputs/exp002/validation_predictions.csv`
+  - `outputs/exp002/feature_importance.csv`
+- 확인 사항:
+  - 제출 행 수: `8760`
+  - 제출 결측값: `0`
+  - 제출 양식과 `forecast_id` 순서 일치
+- 관찰:
+  - 내부 검증 기준 exp001보다 소폭 개선됨.
+  - 개선폭은 `kpx_group_1`에서 가장 큼.
+  - `kpx_group_3`는 여전히 가장 약함.
+  - 피처 수 증가로 학습 시간이 크게 늘어남.
+  - 공개 리더보드 1-nMAE는 exp001보다 `+0.000071` 좋아졌지만 FiCR이 `-0.000705` 낮아져 총점이 하락함.
+  - 위치 기반 피처 추가만으로는 리더보드 개선 효과가 거의 없음.
+- 다음 작업:
+  - exp003에서 풍력 물리 피처 강화 또는 공간 피처 선별 검토
+  - FiCR 개선을 위한 후처리 실험을 앞당길지 검토
+
+## exp003
+
+- 날짜: 2026-07-14
+- 목적: 풍력 물리 피처 강화
+- 학습 기간:
+  - `kpx_group_1`, `kpx_group_2`: 2022-2023년
+  - `kpx_group_3`: 2023년
+- 검증 기간: 2024년
+- 타깃 그룹: `kpx_group_1`, `kpx_group_2`, `kpx_group_3`
+- 입력 데이터: `train/ldaps_train.csv`, `train/gfs_train.csv`, `train/train_labels.csv`
+- 평가 입력 데이터: `test/ldaps_test.csv`, `test/gfs_test.csv`
+- SCADA 사용 여부: 사용하지 않음
+- 외부 데이터 사용 여부: 사용하지 않음
+- 피처:
+  - exp001 피처 전체
+  - 고도별 풍속 차이, 풍속비, 시어 지수
+  - 간이 공기밀도와 풍력 에너지 밀도
+  - 풍향 가중 출력 성분
+  - LDAPS/GFS 간 풍속, 풍속 세제곱, 공기밀도, 풍력 에너지 밀도 차이
+- 모델: 그룹별 LightGBM `regression_l1`
+- 입력 피처 수: 686
+- 검증 NMAE:
+  - 전체 구간 평균 NMAE: `0.094421`
+  - 실제 발전량 10% 이상 구간 평균 NMAE: `0.131746`
+- 검증 1-NMAE:
+  - 전체 구간: `0.905579`
+  - 실제 발전량 10% 이상 구간: `0.868254`
+- exp001 대비:
+  - 전체 구간 1-NMAE: `+0.000085`
+  - 실제 발전량 10% 이상 구간 1-NMAE: `-0.000033`
+- 그룹별 검증 NMAE, 실제 발전량 10% 이상 구간:
+  - `kpx_group_1`: `0.123689`
+  - `kpx_group_2`: `0.123668`
+  - `kpx_group_3`: `0.147881`
+- 최적 반복 횟수:
+  - `kpx_group_1`: `385`
+  - `kpx_group_2`: `357`
+  - `kpx_group_3`: `351`
+- 공개 리더보드: 미제출
+- 비공개 리더보드: 미제출
+- 제출 파일: `submissions/exp003_submission.csv`
+- 코드 스냅샷: `experiments/exp003/`
+- 결과 요약 문서: `outputs/exp003/result.md`
+- 주요 산출물:
+  - `experiments/exp003/README.md`
+  - `experiments/exp003/code/`
+  - `outputs/exp003/metrics.json`
+  - `outputs/exp003/validation_predictions.csv`
+  - `outputs/exp003/feature_importance.csv`
+- 확인 사항:
+  - 제출 행 수: `8760`
+  - 제출 결측값: `0`
+  - 제출 양식과 `forecast_id` 순서 일치
+- 관찰:
+  - 내부 검증 기준 exp001과 거의 유사하고 exp002보다 낮음.
+  - 물리 피처만으로는 뚜렷한 개선이 없음.
+  - `kpx_group_3`는 약간 악화됨.
+- 다음 작업:
+  - exp004에서 모델 변경 효과 확인
+  - exp006-lite에서 FiCR 보정 가능성 확인
+
+## exp004_catboost
+
+- 날짜: 2026-07-14
+- 목적: exp001 기준 모델 피처에서 모델만 CatBoost로 변경
+- 학습 기간:
+  - `kpx_group_1`, `kpx_group_2`: 2022-2023년
+  - `kpx_group_3`: 2023년
+- 검증 기간: 2024년
+- 타깃 그룹: `kpx_group_1`, `kpx_group_2`, `kpx_group_3`
+- 입력 데이터: `train/ldaps_train.csv`, `train/gfs_train.csv`, `train/train_labels.csv`
+- 평가 입력 데이터: `test/ldaps_test.csv`, `test/gfs_test.csv`
+- SCADA 사용 여부: 사용하지 않음
+- 외부 데이터 사용 여부: 사용하지 않음
+- 피처:
+  - exp001 기준 모델 피처와 동일
+  - LDAPS/GFS 전체 격자별 수치 변수의 평균, 최솟값, 최댓값, 표준편차
+  - U/V 성분 기반 풍속, 풍향 `sin`, `cos`
+  - 풍속 제곱, 풍속 세제곱
+  - 예보 선행시간, 시간 주기형 피처
+- 모델: 그룹별 CatBoost `MAE`
+- 입력 피처 수: 494
+- 검증 NMAE:
+  - 전체 구간 평균 NMAE: `0.092942`
+  - 실제 발전량 10% 이상 구간 평균 NMAE: `0.132200`
+- 검증 1-NMAE:
+  - 전체 구간: `0.907058`
+  - 실제 발전량 10% 이상 구간: `0.867800`
+- exp001 대비:
+  - 전체 구간 1-NMAE: `+0.001565`
+  - 실제 발전량 10% 이상 구간 1-NMAE: `-0.000486`
+- 그룹별 검증 NMAE, 실제 발전량 10% 이상 구간:
+  - `kpx_group_1`: `0.126266`
+  - `kpx_group_2`: `0.126526`
+  - `kpx_group_3`: `0.143806`
+- 최적 반복 횟수:
+  - `kpx_group_1`: `297`
+  - `kpx_group_2`: `406`
+  - `kpx_group_3`: `213`
+- 공개 리더보드: 미제출
+- 비공개 리더보드: 미제출
+- 제출 파일: `submissions/exp004_catboost_submission.csv`
+- 코드 스냅샷: `experiments/exp004_catboost/`
+- 결과 요약 문서: `outputs/exp004_catboost/result.md`
+- 주요 산출물:
+  - `experiments/exp004_catboost/README.md`
+  - `experiments/exp004_catboost/code/`
+  - `outputs/exp004_catboost/metrics.json`
+  - `outputs/exp004_catboost/validation_predictions.csv`
+  - `outputs/exp004_catboost/feature_importance.csv`
+- 확인 사항:
+  - 제출 행 수: `8760`
+  - 제출 결측값: `0`
+  - 제출 양식과 `forecast_id` 순서 일치
+- 관찰:
+  - 전체 구간 1-NMAE는 가장 높지만 실제 발전량 10% 이상 구간은 exp001/exp002보다 낮다.
+  - `kpx_group_3`는 좋아졌지만 `kpx_group_1`, `kpx_group_2`가 나빠졌다.
+  - exp001과의 제출값 상관은 `0.986125~0.992508` 범위로 XGBoost보다 낮아 앙상블 재료로는 더 의미 있다.
+  - 단독 제출 우선순위는 낮다.
+- 다음 작업:
+  - exp005에서 exp001/exp002와 CatBoost를 낮은 비율로 섞는 앙상블 실험
+  - exp006-lite에서 FiCR 후보정 우선 확인
+
+## exp004_xgboost
+
+- 날짜: 2026-07-14
+- 목적: exp001 기준 모델 피처에서 모델만 XGBoost로 변경
+- 학습 기간:
+  - `kpx_group_1`, `kpx_group_2`: 2022-2023년
+  - `kpx_group_3`: 2023년
+- 검증 기간: 2024년
+- 타깃 그룹: `kpx_group_1`, `kpx_group_2`, `kpx_group_3`
+- 입력 데이터: `train/ldaps_train.csv`, `train/gfs_train.csv`, `train/train_labels.csv`
+- 평가 입력 데이터: `test/ldaps_test.csv`, `test/gfs_test.csv`
+- SCADA 사용 여부: 사용하지 않음
+- 외부 데이터 사용 여부: 사용하지 않음
+- 피처:
+  - exp001 기준 모델 피처와 동일
+  - LDAPS/GFS 전체 격자별 수치 변수의 평균, 최솟값, 최댓값, 표준편차
+  - U/V 성분 기반 풍속, 풍향 `sin`, `cos`
+  - 풍속 제곱, 풍속 세제곱
+  - 예보 선행시간, 시간 주기형 피처
+- 모델: 그룹별 XGBoost `reg:absoluteerror`
+- 입력 피처 수: 494
+- 검증 NMAE:
+  - 전체 구간 평균 NMAE: `0.095624`
+  - 실제 발전량 10% 이상 구간 평균 NMAE: `0.132271`
+- 검증 1-NMAE:
+  - 전체 구간: `0.904376`
+  - 실제 발전량 10% 이상 구간: `0.867729`
+- exp001 대비:
+  - 전체 구간 1-NMAE: `-0.001118`
+  - 실제 발전량 10% 이상 구간 1-NMAE: `-0.000557`
+- 그룹별 검증 NMAE, 실제 발전량 10% 이상 구간:
+  - `kpx_group_1`: `0.124898`
+  - `kpx_group_2`: `0.122264`
+  - `kpx_group_3`: `0.149651`
+- 최적 반복 횟수:
+  - `kpx_group_1`: `574`
+  - `kpx_group_2`: `783`
+  - `kpx_group_3`: `409`
+- 공개 리더보드: 미제출
+- 비공개 리더보드: 미제출
+- 제출 파일: `submissions/exp004_xgboost_submission.csv`
+- 코드 스냅샷: `experiments/exp004_xgboost/`
+- 결과 요약 문서: `outputs/exp004_xgboost/result.md`
+- 주요 산출물:
+  - `experiments/exp004_xgboost/README.md`
+  - `experiments/exp004_xgboost/code/`
+  - `outputs/exp004_xgboost/metrics.json`
+  - `outputs/exp004_xgboost/validation_predictions.csv`
+  - `outputs/exp004_xgboost/feature_importance.csv`
+- 확인 사항:
+  - 제출 행 수: `8760`
+  - 제출 결측값: `0`
+  - 제출 양식과 `forecast_id` 순서 일치
+- 관찰:
+  - exp001/exp002보다 내부 검증이 낮다.
+  - `kpx_group_2`는 좋아졌지만 `kpx_group_3`가 크게 나빠졌다.
+  - exp001과의 제출값 상관은 `0.995236~0.996509`로 매우 높아, 다양성 관점에서도 약하다.
+  - 단독 제출과 앙상블 모두 우선순위가 낮다.
+- 다음 작업:
+  - XGBoost는 당장 제출하지 않는다.
+  - 다음 실험은 모델 추가보다 앙상블/후보정 쪽으로 전환한다.
+
+## 템플릿
+
+### expXXX
+
+- 날짜:
+- 목적:
+- 학습 기간:
+- 검증 기간:
+- 타깃 그룹:
+- 입력 데이터:
+- 피처:
+- 모델:
+- 파라미터:
+- 검증 NMAE:
+- 검증 1-NMAE:
+- 검증 FiCR:
+- 공개 리더보드:
+- 비공개 리더보드:
+- 제출 파일:
+- 결과 요약 문서:
+- 변경점:
+- 좋아진 점:
+- 나빠진 점:
+- 다음 작업:
